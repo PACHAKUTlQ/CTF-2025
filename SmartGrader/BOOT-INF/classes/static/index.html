@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartGrader</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/locale/zh-cn.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/ant-design-vue@1.7.8/dist/antd.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/ant-design-vue@1.7.8/dist/antd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 32px;
+            color: #1890ff;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 24px;
+            background: #fafafa;
+            border-radius: 4px;
+            border: 1px dashed #d9d9d9;
+        }
+
+        .upload-section:hover {
+            border-color: #1890ff;
+        }
+
+        .grade-rules {
+            margin-bottom: 24px;
+            background: #fff;
+            padding: 24px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .rule-item {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #f8f8f8;
+            border-radius: 4px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .rule-item-content {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .rule-item-content > * {
+            margin: 0 8px !important;
+        }
+
+        .rule-item-content > .ant-input-number {
+            width: 20%;
+        }
+
+        .rule-item-content > .ant-select {
+            width: 10%;
+        }
+
+        .score-table {
+            margin-top: 24px;
+            background: #fff;
+            padding: 24px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #333;
+            border-left: 4px solid #1890ff;
+            padding-left: 12px;
+        }
+
+        .delete-btn {
+            color: #ff4d4f !important;
+            margin-left: 8px !important;
+        }
+
+        .delete-btn:hover {
+            color: #ff7875 !important;
+        }
+
+        .action-bar {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <a-config-provider :locale="zhCN">
+        <div class="container">
+            <h1 class="page-title">SmartGrader</h1>
+
+            <div class="upload-section">
+                <a-upload
+                        :before-upload="handleBeforeUpload"
+                        accept=".xlsx,.xls"
+                        :show-upload-list="false"
+                >
+                    <a-button type="primary">
+                        上传 Excel 文件
+                    </a-button>
+                </a-upload>
+                <div style="margin-top: 8px; color: #666;">
+                    支持 .xlsx 或 .xls 格式的 Excel 文件，请确保包含“学号”、“姓名”、“成绩”列
+                </div>
+            </div>
+
+            <div class="grade-rules">
+                <h3 class="section-title">规则配置</h3>
+                <template v-for="(rule, index) in gradeRules">
+                    <div :key="index" class="rule-item">
+                        <div class="rule-item-content">
+                            <a-input-number
+                                    :value="rule.leftScore"
+                                    @change="val => updateRule(index, 'leftScore', val)"
+                                    placeholder="最低分数"
+                                    :min="0"
+                                    :precision="1"
+                            ></a-input-number>
+                            <a-select
+                                    :value="rule.leftSymbol"
+                                    @change="val => updateRule(index, 'leftSymbol', val)"
+                            >
+                                <a-select-option value="<">&lt;</a-select-option>
+                                <a-select-option value="<=">&le;</a-select-option>
+                            </a-select>
+                            <span>分数</span>
+                            <a-select
+                                    :value="rule.rightSymbol"
+                                    @change="val => updateRule(index, 'rightSymbol', val)"
+                            >
+                                <a-select-option value="<">&lt;</a-select-option>
+                                <a-select-option value="<=">&le;</a-select-option>
+                            </a-select>
+                            <a-input-number
+                                    :value="rule.rightScore"
+                                    @change="val => updateRule(index, 'rightScore', val)"
+                                    placeholder="最高分数"
+                                    :min="0"
+                                    :precision="1"
+                            ></a-input-number>
+                            <span>等级：</span>
+                            <a-input
+                                    :value="rule.grade"
+                                    @input="e => updateRule(index, 'grade', e.target.value)"
+                                    placeholder="等级"
+                                    style="width: 100px;"
+                            ></a-input>
+                            <a-button
+                                    v-if="index !== 0"
+                                    type="link"
+                                    @click="removeRule(index)"
+                                    class="delete-btn"
+                            >
+                                删除
+                            </a-button>
+                        </div>
+                    </div>
+                </template>
+                <a-button type="dashed" @click="addRule" style="width: 100%; height: 40px;">
+                    添加规则
+                </a-button>
+            </div>
+
+            <div class="score-table">
+                <h3 class="section-title">成绩列表</h3>
+                <div class="action-bar" v-if="tableData.length > 0">
+                    <a-button type="primary" @click="exportData">
+                        导出成绩
+                    </a-button>
+                </div>
+                <a-table
+                        :columns="columns"
+                        :data-source="tableData"
+                        :pagination="{ pageSize: 10, showTotal: total => `共 ${total} 条记录` }"
+                        :bordered="true"
+                        :loading="loading"
+                >
+                    <template slot="scoreColumn" slot-scope="text">
+                        <span :style="{ color: text < 60 ? '#ff4d4f' : 'inherit' }">{{ text }}</span>
+                    </template>
+                    <template slot="gradeColumn" slot-scope="text">
+                        <a-tag>{{ text }}</a-tag>
+                    </template>
+                </a-table>
+            </div>
+        </div>
+    </a-config-provider>
+</div>
+
+<script>
+    Vue.use(antd);
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                loading: false,
+                gradeRules: [
+                    {
+                        leftScore: 90,
+                        leftSymbol: '<=',
+                        rightScore: 100,
+                        rightSymbol: '<=',
+                        grade: 'A'
+                    },
+                    {
+                        leftScore: 80,
+                        leftSymbol: '<=',
+                        rightScore: 90,
+                        rightSymbol: '<',
+                        grade: 'B'
+                    },
+                    {
+                        leftScore: 70,
+                        leftSymbol: '<=',
+                        rightScore: 80,
+                        rightSymbol: '<',
+                        grade: 'C'
+                    },
+                    {
+                        leftScore: 60,
+                        leftSymbol: '<=',
+                        rightScore: 70,
+                        rightSymbol: '<',
+                        grade: 'D'
+                    },
+                    {
+                        leftScore: 0,
+                        leftSymbol: '<=',
+                        rightScore: 60,
+                        rightSymbol: '<',
+                        grade: 'F'
+                    }
+                ],
+                columns: [
+                    {title: '学号', dataIndex: 'studentId', key: 'studentId', width: 120},
+                    {title: '姓名', dataIndex: 'name', key: 'name', width: 100},
+                    {
+                        title: '成绩',
+                        dataIndex: 'score',
+                        key: 'score',
+                        scopedSlots: {customRender: 'scoreColumn'},
+                        width: 100,
+                        sorter: (a, b) => a.score - b.score
+                    },
+                    {
+                        title: '等级',
+                        dataIndex: 'grade',
+                        key: 'grade',
+                        scopedSlots: {customRender: 'gradeColumn'},
+                        width: 80,
+                    }
+                ],
+                tableData: []
+            }
+        },
+        methods: {
+            updateRule(index, field, value) {
+                this.$set(this.gradeRules[index], field, value);
+                this.recalculateGrade();
+            },
+            addRule() {
+                if (this.gradeRules.length >= 10) {
+                    this.$message.warning('最多只能添加10条规则');
+                    return;
+                }
+                this.gradeRules.push({
+                    leftScore: 0,
+                    leftSymbol: '<=',
+                    rightScore: 100,
+                    rightSymbol: '<=',
+                    grade: 'A'
+                });
+                this.recalculateGrade();
+            },
+            removeRule(index) {
+                this.gradeRules.splice(index, 1);
+                this.recalculateGrade();
+            },
+            recalculateGrade() {
+                this.calculateGrade().then(grades => {
+                    if (grades.length !== this.tableData.length) {
+                        this.$message.error('等级计算失败，请检查规则配置');
+                        return;
+                    }
+                    this.tableData.forEach((item, index) => {
+                        item.grade = grades[index] || 'N/A';
+                    });
+                    this.$message.success('等级计算成功');
+                });
+            },
+            handleBeforeUpload(file) {
+                this.loading = true;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        if (jsonData.length === 0) {
+                            throw new Error('Excel 文件为空');
+                        }
+                        const firstRow = jsonData[0];
+                        if (!('学号' in firstRow || 'StudentID' in firstRow)) {
+                            throw new Error('未找到“学号”列');
+                        }
+                        if (!('姓名' in firstRow || 'Name' in firstRow)) {
+                            throw new Error('未找到“姓名”列');
+                        }
+                        if (!('成绩' in firstRow || 'Score' in firstRow)) {
+                            throw new Error('未找到“成绩”列');
+                        }
+                        this.tableData = jsonData.map((row, index) => {
+                            const score = parseFloat(row['成绩'] || row['Score']);
+                            if (isNaN(score) || score < 0) {
+                                throw new Error(`第 ${index + 1} 行的成绩无效，必须是不小于0的数字`);
+                            }
+                            return {
+                                key: index,
+                                studentId: row['学号'] || row['StudentID'],
+                                name: row['姓名'] || row['Name'],
+                                score: score,
+                                grade: "N/A"
+                            };
+                        });
+                        this.recalculateGrade();
+                        this.$message.success(`成功导入 ${this.tableData.length} 条成绩数据`);
+                    } catch (error) {
+                        this.$message.error(error.message || '文件解析失败，请检查文件格式');
+                        this.tableData = [];
+                    }
+                    this.loading = false;
+                };
+                reader.onerror = () => {
+                    this.$message.error('文件读取失败');
+                    this.loading = false;
+                };
+                reader.readAsArrayBuffer(file);
+                return false;
+            },
+            async calculateGrade() {
+                const scores = this.tableData.map(item => item.score);
+                const response = await fetch('/api/grader', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({scores, rules: this.gradeRules})
+                });
+                if (response.ok) {
+                    return await response.json();
+                }
+                return [];
+            },
+            exportData() {
+                try {
+                    const ws = XLSX.utils.json_to_sheet(this.tableData.map(item => ({
+                        '学号': item.studentId,
+                        '姓名': item.name,
+                        '成绩': item.score,
+                        '等级': item.grade
+                    })));
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, '成绩单');
+                    XLSX.writeFile(wb, '等级评定结果.xlsx');
+                    this.$message.success('导出成功');
+                } catch (error) {
+                    this.$message.error('导出失败：' + error.message);
+                }
+            }
+        }
+    });
+</script>
+</body>
+</html>
