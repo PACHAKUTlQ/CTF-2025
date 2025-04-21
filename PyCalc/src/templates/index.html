@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线计算器</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --hover-color: #357abd;
+            --background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--background);
+        }
+
+        .calculator {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            width: 90%;
+            max-width: 500px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--hover-color);
+            transform: translateY(-2px);
+        }
+
+        .result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.4rem;
+            min-height: 60px;
+        }
+
+        .error {
+            color: #e74c3c;
+            margin-top: 1rem;
+            text-align: center;
+            display: none;
+        }
+
+        .history {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .history h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        #historyList {
+            list-style: none;
+        }
+
+        @media (max-width: 480px) {
+            .calculator {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>📐 在线科学计算器</h1>
+        
+        <div class="input-group">
+            <input 
+                type="text" 
+                id="expression" 
+                placeholder="输入数学表达式，例如：3 + 4 * (5 - 2)"
+                autocomplete="off"
+            >
+        </div>
+
+        <button onclick="calculate()">计 算</button>
+
+        <div class="result" id="result">
+            🎯 等待计算...
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="history">
+            <h3>📜 计算历史</h3>
+            <ul id="historyList"></ul>
+        </div>
+    </div>
+
+    <script>
+        // 为输入框添加回车键支持
+        document.getElementById('expression').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') calculate();
+        });
+
+        async function calculate() {
+            const expressionInput = document.getElementById('expression');
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            const historyList = document.getElementById('historyList');
+            
+            // 清除之前的状态
+            errorDiv.style.display = 'none';
+            resultDiv.textContent = '⏳ 计算中...';
+            resultDiv.style.color = '#2c3e50';
+
+            try {
+                const response = await fetch(`/calc?expr=${encodeURIComponent(expressionInput.value)}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '未知错误');
+                }
+
+                // 显示结果
+                resultDiv.innerHTML = `
+                    <div style="color: #27ae60;">✅ 计算结果：</div>
+                    <div style="font-size: 2rem; margin-top: 0.5rem;">${data.result}</div>
+                `;
+
+                // 添加到历史记录
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span style="color: #7f8c8d;">${expressionInput.value} = </span>
+                    <strong>${data.result}</strong>
+                `;
+                historyList.insertBefore(li, historyList.firstChild);
+
+                // 清空输入框
+                expressionInput.value = '';
+            } catch (error) {
+                resultDiv.textContent = '❌ 计算失败';
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
