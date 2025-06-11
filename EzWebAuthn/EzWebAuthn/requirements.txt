@@ -1,0 +1,5 @@
+webauthn==2.5.0
+python-dotenv
+Flask
+schedule
+gunicorn
