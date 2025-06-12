@@ -1,0 +1,7 @@
+services:
+  web:
+    build: .
+    ports:
+      - "23333:80"
+    env_file:
+      - .env
