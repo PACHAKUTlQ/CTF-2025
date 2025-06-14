@@ -1,0 +1,19 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  font-size: 4em;
+}
+
+p {
+  margin-block-start: 0px;
+  margin-block-end: 0.1em;
+}
+
+.line {
+  height: 0.1em;
+  width: 100%;
+  background: linear-gradient(90deg, #F44336, #FF9800, #FFEB3B, #8BC34A, #03A9F4, #5C6BC0, #AB47BC);
+}

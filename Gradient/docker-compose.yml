@@ -1,0 +1,16 @@
+services:
+  nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "80:80"
+
+  php:
+    build:
+      context: ./app
+
+  bot:
+    build:
+      context: ./bot
+    ports:
+      - "13000:3000"
