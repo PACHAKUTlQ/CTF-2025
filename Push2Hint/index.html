@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>PUSH</title>
+</head>
+
+<body>
+  <button id="pushButton">push</button>
+  <div id="hintContainer"></div>
+  <script>
+    document.getElementById('pushButton').addEventListener('click', function () {
+      var hints = ["Do you know *push*?", "You might not know about it, it is *deprecated* a while ago", "I just pushed the *Hint*! Maybe search for this word", "There is no flag inside the gif!"];
+      var randomHint = hints[Math.floor(Math.random() * hints.length)];
+      alert(randomHint);
+      if (!document.getElementById('pushImage')) {
+        // Create a wrapper for the image and caption
+        var wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+
+        var img = document.createElement('img');
+        img.id = 'pushImage';
+        img.src = '/push.gif';
+        wrapper.appendChild(img);
+
+        var caption = document.createElement('b');
+        caption.textContent = 'PUSH';
+        caption.style.position = 'absolute';
+        caption.style.bottom = '0';
+        caption.style.left = '50%';
+        caption.style.transform = 'translateX(-50%)';
+        caption.style.fontSize = '54px';
+        caption.style.color = 'white';
+        wrapper.appendChild(caption);
+
+        document.getElementById('hintContainer').appendChild(wrapper);
+      }
+    });
+  </script>
+</body>
+
+</html>
